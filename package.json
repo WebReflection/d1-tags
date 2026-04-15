@@ -1,6 +1,6 @@
 {
   "name": "d1-tags",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Tagged-template helpers for Cloudflare D1",
   "main": "index.js",
   "module": "index.js",
@@ -23,8 +23,12 @@
     "coverage": "mkdir -p ./coverage; c8 report --reporter=text-lcov > ./coverage/lcov.info"
   },
   "c8": {
-    "include": ["index.js"],
-    "exclude": ["test/**"]
+    "include": [
+      "index.js"
+    ],
+    "exclude": [
+      "test/**"
+    ]
   },
   "keywords": [
     "D1",

@@ -19,8 +19,8 @@
     "./types": "./types/index.d.ts"
   },
   "scripts": {
-    "test": "node --test test/",
-    "coverage": "c8 --reporter=text --reporter=html node --test test/"
+    "test": "c8 node --test test/",
+    "coverage": "mkdir -p ./coverage; c8 report --reporter=text-lcov > ./coverage/lcov.info"
   },
   "c8": {
     "include": ["index.js"],

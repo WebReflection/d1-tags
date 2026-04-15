@@ -1,5 +1,7 @@
 # d1-tags
 
+[![Coverage Status](https://coveralls.io/repos/github/WebReflection/d1-tags/badge.svg?branch=main)](https://coveralls.io/github/WebReflection/d1-tags?branch=main)
+
 Tagged-template helpers for [Cloudflare D1](https://developers.cloudflare.com/d1/): write SQL as template literals, bind values safely, and reuse prepared statements without boilerplate.
 
 ```js

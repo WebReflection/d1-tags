@@ -19,7 +19,12 @@
     "./types": "./types/index.d.ts"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test test/",
+    "coverage": "c8 --reporter=text --reporter=html node --test test/"
+  },
+  "c8": {
+    "include": ["index.js"],
+    "exclude": ["test/**"]
   },
   "keywords": [
     "D1",
@@ -31,6 +36,7 @@
   "type": "module",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260415.1",
+    "c8": "^11.0.0",
     "typescript": "^5.9.3"
   },
   "repository": {

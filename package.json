@@ -1,0 +1,44 @@
+{
+  "name": "d1-tags",
+  "version": "0.0.0",
+  "description": "Tagged-template helpers for Cloudflare D1",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "types/index.d.ts",
+  "files": [
+    "index.js",
+    "types/",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./types/index.d.ts"
+    },
+    "./types": "./types/index.d.ts"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "D1",
+    "Cloudflare",
+    "Tags"
+  ],
+  "author": "Andrea Giammarchi",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260415.1",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebReflection/d1-tags.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WebReflection/d1-tags/issues"
+  },
+  "homepage": "https://github.com/WebReflection/d1-tags#readme"
+}

@@ -104,6 +104,9 @@ export default DB => {
      */
     const exec = (template, ...fields) => {
       guard(template, fields);
+      // this might be a good or bad idea ... escaped backticks
+      // might mislead though, so for now it's considered a bad idea
+      // return DB.exec(str.raw(template, ...fields));
       let sql = template[0];
       for (let i = 0; i < fields.length; i++)
         sql += str(fields[i]) + template[i + 1];

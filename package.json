@@ -1,6 +1,6 @@
 {
   "name": "d1-tags",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Tagged-template helpers for Cloudflare D1",
   "main": "index.js",
   "module": "index.js",

@@ -41,6 +41,22 @@ const guard = (template, { length }) => {
     throw new SyntaxError('Invalid template: ' + str(template));
 };
 
+const handler = {
+  /**
+   * @param {ReadonlyArray<Record<string | symbol, unknown>>} list
+   * @param {string | symbol} prop
+   * @returns {unknown[]}
+   */
+  get: (list, prop) => list.map(item => item[prop]),
+};
+
+/**
+ * @template {Record<string, unknown>} T
+ * @param {readonly T[]} list
+ * @returns {import('./types/index.js').MappedList<T>}
+ */
+const map = list => /** @type {import('./types/index.js').MappedList<T>} */ (new Proxy(list, handler));
+
 /** @type {WeakMap<DB, import('./types/index.js').D1Tags>} */
 const dbs = new WeakMap;
 
@@ -110,13 +126,6 @@ export default DB => {
       let sql = template[0];
       for (let i = 0; i < fields.length; i++)
         sql += str(fields[i]) + template[i + 1];
-        // // Cursor told me not to do this ... and convinced me!
-        // const field = fields[i];
-        // const next = template[i + 1];
-        // let value = field;
-        // if (typeof field === 'string' && !(/(['"])$/.test(template[i]) && new RegExp(`^${re.$1}`).test(next)))
-        //   value = `'${field.replace(/'/g, "''")}'`;
-        // sql.push(value, next);
       return DB.exec(sql);
     };
 
@@ -134,18 +143,26 @@ export default DB => {
       return get(wm, template, DB).bind(...fields).run();
     };
 
-    dbs.set(DB, (db = { batch, escape, exec, first, raw, run }));
+    db = { batch, escape, exec, first, map, raw, run };
+    dbs.set(DB, db);
   }
   return db;
 };
 
 /**
  * @this {PreparedStatement}
- * @param {unknown} fields one bound row (`unknown[]`); typed as `unknown` because `map` passes `unknown`
+ * @param {unknown} _ one column array from `batch`’s `fields` (`fields.map` callback element)
+ * @param {number} index row index (batch row)
+ * @param {unknown[]} array all column arrays passed to `batch` (same as `fields`)
  * @returns {PreparedStatement}
  */
-function batched(fields) {
-  if (!isArray(fields))
-    throw new SyntaxError('Invalid batch: ' + str(fields));
-  return this.bind(.../** @type {unknown[]} */ (fields));
+function batched(_, index, array) {
+  const fields = [];
+  for (let field, i = 0; i < array.length; i++) {
+    field = array[i];
+    if (!isArray(field) || field.length <= index)
+      throw new SyntaxError('Invalid batch: ' + str(field));
+    fields.push(field[index]);
+  }
+  return this.bind(...fields);
 }

@@ -70,7 +70,12 @@ test('exec concatenates template parts with String(field)', async () => {
 test('batch maps each row with bind on one prepared statement', async () => {
   const { db, calls } = createFakeD1();
   const tags = D1Tags(db);
-  await tags.batch`INSERT INTO Customers (CustomerId, CompanyName, ContactName) VALUES (${[1, 'A', 'Alice']}, ${[2, 'B', 'Bob']}, ${[3, 'C', 'Carol']})`;
+  const customers = tags.map([
+    { id: 1, name: 'Alice', company: 'A' },
+    { id: 2, name: 'Bob', company: 'B' },
+    { id: 3, name: 'Carol', company: 'C' },
+  ]);
+  await tags.batch`INSERT INTO Customers (CustomerId, CompanyName, ContactName) VALUES (${customers.id}, ${customers.company}, ${customers.name})`;
   assert.deepEqual(calls.prepareSql, ['INSERT INTO Customers (CustomerId, CompanyName, ContactName) VALUES (?, ?, ?)']);
   assert.equal(calls.batchRuns.length, 1);
   assert.deepEqual(calls.batchRuns[0], [

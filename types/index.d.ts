@@ -20,4 +20,5 @@ export type {
   AugmentedRaw,
   AugmentedFactory,
   D1Tags,
+  MappedList,
 } from './augmented';

@@ -56,21 +56,36 @@ export interface AugmentedFactory {
   (name: 'raw'): AugmentedRaw;
 }
 
+/**
+ * Column-oriented view of row objects returned by {@link D1Tags.map}.
+ * Each key of `T` maps to an array of that property’s values across rows (same length and order as the input list).
+ */
+export type MappedList<T extends Record<string, unknown>> = {
+  readonly [K in keyof T]: T[K][];
+};
+
 /** Object returned from the default export `d1Tags(env.DB)`. */
 export interface D1Tags {
   /**
-   * Each `fields[i]` is passed to `stmt.bind(...fields[i])` (must be an `unknown[]` at runtime).
-   * `guard` requires `fields.length === template.length - 1`.
+   * Column-oriented batching: each template interpolation is one **column** — an array of values, one entry per row.
+   * The implementation zips columns by index: row `i` is bound as `fields.map((col) => col[i])` (see `batched` in the implementation).
+   * All column arrays must have the same length. `guard` requires one interpolation per `?` placeholder.
+   * Pair with {@link D1Tags.map} to derive column arrays from an array of row objects.
    */
   batch: (
     template: TemplateStringsArray,
-    ...fields: unknown[]
+    ...fields: unknown[][]
   ) => Promise<D1Result<unknown>[]>;
   escape: (field: unknown) => string;
   exec: (
     template: TemplateStringsArray,
     ...fields: unknown[]
   ) => Promise<D1ExecResult>;
+  /**
+   * Given an array of row objects, returns a `Proxy` that exposes each property as a column array
+   * (`rows.map((row) => row[key])`), suitable for spreading into {@link D1Tags.batch}.
+   */
+  map: <T extends Record<string, unknown>>(list: readonly T[]) => MappedList<T>;
   first: AugmentedFirst;
   raw: AugmentedRaw;
   run: (

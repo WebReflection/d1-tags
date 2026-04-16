@@ -32,7 +32,7 @@ Peer expectation: a D1 binding (`D1Database`) from your Worker / Pages environme
 
 ## Why use this?
 
-- **Tagged templates** — interpolations become bound parameters (`?`), not string concatenation, for `run`, `first`, `raw`, and `batch` (same idea as `sql`…`` in other stacks).
+- **Tagged templates** — interpolations become bound parameters (`?`), not string concatenation, for `run`, `first`, `raw`, and `batch` (same idea as `sql`…`` in other stacks). **`map`** turns an array of row objects into column arrays for **`batch`**.
 - **Prepared statement cache** — each distinct template string array is prepared **once** per `D1Database` instance (cached in a `WeakMap`, keyed by the frozen template object from the tag).
 - **Per-DB API object** — call `d1Tags(env.DB)` once; the returned helpers are reused for that same binding.
 - **TypeScript** — typings ship under `types/`; `package.json` `"types"` and `"exports"` point at them.
@@ -46,7 +46,8 @@ Call **`d1Tags(db)`** once with your D1 binding. You get an object with:
 | **`run`** | `prepare(…).bind(…).run()` | Full `D1Result` for the statement. |
 | **`first`** | `prepare(…).bind(…).first()` | Default row object, or curried column name (see below). |
 | **`raw`** | `prepare(…).bind(…).raw(…)` | Tabular rows; optional curried `raw` options (see below). |
-| **`batch`** | `db.batch([ … ])` | One prepared shape; multiple bind tuples (see below). |
+| **`batch`** | `db.batch([ … ])` | One prepared statement; each `?` is a **column** of bind values across rows (see below). |
+| **`map`** | — | Turns `T[]` into per-property column arrays for use with **`batch`**. |
 | **`exec`** | `db.exec(string)` | Builds SQL by concatenating template parts and values — **not** parameterized. |
 | **`escape`** | — | SQLite string literal helper: wraps in `'…'` and doubles embedded `'`. Meant for **`exec`**, not for bound tags. |
 
@@ -76,20 +77,43 @@ const withNames = await raw({ columnNames: true })`
 
 ### `batch`
 
-You pass **one** SQL shape (with `?` placeholders) and **N** interpolations. Each interpolation must be an **array** of bind values for one execution. The guard requires `N ===` number of placeholders, and `DB.batch` receives N bound statements.
+You pass **one** SQL shape (with `?` placeholders) and **one interpolation per placeholder**. The twist is that batching is **column-oriented**: each interpolation is an **array of values for that column**, with one element per row. At row index `i`, the bound tuple is the `i`th element from each column array (same idea as zipping columns into rows).
 
-Example: three rows, three columns per row, three `?` in the statement:
+The arity guard still requires `placeholders === interpolations` (frozen template, same as `run` / `first`). Every column array must have the **same length**; otherwise you get `SyntaxError: Invalid batch`.
+
+Example: three rows and three columns — three `?` placeholders and three column arrays (ids, companies, names):
 
 ```js
 const { batch } = d1Tags(env.DB);
 
 const results = await batch`
   INSERT INTO Customers (CustomerId, CompanyName, ContactName)
-  VALUES (${[1, 'A', 'Alice']}, ${[2, 'B', 'Bob']}, ${[3, 'C', 'Carol']})
+  VALUES (${[1, 2, 3]}, ${['A', 'B', 'C']}, ${['Alice', 'Bob', 'Carol']})
 `;
 ```
 
-(Adjust the SQL to your real schema; the important part is **one `?` per column** and **each interpolation is one `unknown[]` row**.)
+That produces three bound statements (one per row), each `prepare(…).bind(…)` sharing the same prepared SQL.
+
+### `map`
+
+When your data is an **array of row objects**, use **`map(rows)`** to get column arrays without hand-writing `[row0.a, row1.a, …]` for every field. The helper returns a `Proxy`: property access runs `rows.map((row) => row[prop])`, so each key becomes one array you can pass as a single `${…}` column to **`batch`**.
+
+```js
+const { batch, map } = d1Tags(env.DB);
+
+const customers = map([
+  { id: 1, name: 'Alice', company: 'A' },
+  { id: 2, name: 'Bob', company: 'B' },
+  { id: 3, name: 'Carol', company: 'C' },
+]);
+
+await batch`
+  INSERT INTO Customers (CustomerId, CompanyName, ContactName)
+  VALUES (${customers.id}, ${customers.company}, ${customers.name})
+`;
+```
+
+In TypeScript, `MappedList<T>` (exported from `d1-tags/types`) describes that column view: for each key `K` of `T`, you get `T[K][]`.
 
 ### `exec` and `escape`
 
@@ -114,9 +138,13 @@ Templates from tags are frozen arrays; the guard checks frozen + arity so placeh
 
 ```ts
 import d1Tags from 'd1-tags';
-import type { D1Tags, AugmentedFirst } from 'd1-tags/types';
+import type { D1Tags, MappedList } from 'd1-tags/types';
 
 const api: D1Tags = d1Tags(env.DB);
+
+type Row = { id: number; company: string };
+declare const rows: readonly Row[];
+const columns: MappedList<Row> = api.map(rows);
 ```
 
 Types live in `types/index.d.ts` (see also `package.json` `"exports"`).
